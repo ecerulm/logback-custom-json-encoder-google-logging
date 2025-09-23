@@ -14,6 +14,8 @@ public class GoogleStructuredLoggingJacksonEncoder extends EncoderBase<ILoggingE
 
     private static JsonFactory jsonFactory = new JsonFactory();
     private static final byte[] EMPTY_BYTES = new byte[0];
+    private static final java.time.format.DateTimeFormatter formatter =
+            java.time.format.DateTimeFormatter.ISO_INSTANT;
 
     @Override
     public byte[] encode(ch.qos.logback.classic.spi.ILoggingEvent event) {
@@ -24,6 +26,17 @@ public class GoogleStructuredLoggingJacksonEncoder extends EncoderBase<ILoggingE
         StringWriter sw = new StringWriter();
         try (JsonGenerator jg = jsonFactory.createGenerator(sw)) {
             jg.writeStartObject();
+
+            jg.writeFieldName("time");
+            jg.writeString(formatter.format(event.getInstant()));
+
+            jg.writeFieldName("timestamp");
+            jg.writeStartObject();
+            jg.writeFieldName("seconds");
+            jg.writeNumber(event.getTimeStamp() / 1000);
+            jg.writeFieldName("nanos");
+            jg.writeNumber(event.getNanoseconds());
+            jg.writeEndObject();
 
             jg.writeFieldName("timestampSeconds");
             jg.writeNumber(event.getTimeStamp() / 1000);
