@@ -16,6 +16,70 @@ public class GoogleStructuredLoggingJacksonEncoder extends EncoderBase<ILoggingE
     private static final byte[] EMPTY_BYTES = new byte[0];
     private static final java.time.format.DateTimeFormatter formatter =
             java.time.format.DateTimeFormatter.ISO_INSTANT;
+    
+    // Configuration parameter for time format
+    private String timeFormat = "timeStampObject"; // default value
+    
+    /**
+     * Sets the time format for log output.
+     * @param timeFormat One of: "timeStampObject", "timestampFieldsTopLevel", "timeRFC3339"
+     */
+    public void setTimeFormat(String timeFormat) {
+        if (timeFormat != null && 
+            ("timeStampObject".equals(timeFormat) || 
+             "timestampFieldsTopLevel".equals(timeFormat) || 
+             "timeRFC3339".equals(timeFormat))) {
+            this.timeFormat = timeFormat;
+        } else {
+            addWarn("Invalid timeFormat value: " + timeFormat + ". Using default: timeStampObject");
+            this.timeFormat = "timeStampObject";
+        }
+    }
+    
+    /**
+     * Gets the current time format setting.
+     * @return the current time format
+     */
+    public String getTimeFormat() {
+        return timeFormat;
+    }
+    
+    /**
+     * Writes time fields to the JSON output based on the configured timeFormat.
+     * @param jg JsonGenerator to write to
+     * @param event The logging event containing timestamp information
+     * @throws IOException if writing fails
+     */
+    private void writeTimeFields(JsonGenerator jg, ILoggingEvent event) throws IOException {
+        switch (timeFormat) {                
+            case "timestampFieldsTopLevel":
+                // GKE preference #2: timestampSeconds / timestampNanos at top level
+                jg.writeFieldName("timestampSeconds");
+                jg.writeNumber(event.getTimeStamp() / 1000);
+                jg.writeFieldName("timestampNanos");
+                jg.writeNumber(event.getNanoseconds());
+                break;
+                
+            case "timeRFC3339":
+                // GKE preference #3: time in RFC3339 format
+                jg.writeFieldName("time");
+                jg.writeString(formatter.format(event.getInstant()));
+                break;
+                
+            case "timeStampObject":
+                // GKE preference #1: timestamp.seconds / timestamp.nanos
+            default:
+                // Fallback to timestamp object format
+                jg.writeFieldName("timestamp");
+                jg.writeStartObject();
+                jg.writeFieldName("seconds");
+                jg.writeNumber(event.getTimeStamp() / 1000);
+                jg.writeFieldName("nanos");
+                jg.writeNumber(event.getNanoseconds());
+                jg.writeEndObject();
+                break;
+        }
+    }
 
     @Override
     public byte[] encode(ch.qos.logback.classic.spi.ILoggingEvent event) {
@@ -27,30 +91,8 @@ public class GoogleStructuredLoggingJacksonEncoder extends EncoderBase<ILoggingE
         try (JsonGenerator jg = jsonFactory.createGenerator(sw)) {
             jg.writeStartObject();
 
-
-            // For GKE logging agent we only need one of the time-related fields.
-            // I've include all of them for educational purposes.
-            // In order of preference, GKE will read
-            // 1. timestamp.seconds / timestamp.nanos if exists
-            // 2. timestempSeconds / timestampNanos if exists
-            // 3. time (RFC3339 format) if exists
-
-            jg.writeFieldName("time");
-            jg.writeString(formatter.format(event.getInstant()));
-
-            jg.writeFieldName("timestamp");
-            jg.writeStartObject();
-            jg.writeFieldName("seconds");
-            jg.writeNumber(event.getTimeStamp() / 1000);
-            jg.writeFieldName("nanos");
-            jg.writeNumber(event.getNanoseconds());
-            jg.writeEndObject();
-
-            jg.writeFieldName("timestampSeconds");
-            jg.writeNumber(event.getTimeStamp() / 1000);
-
-            jg.writeFieldName("timestampNanos");
-            jg.writeNumber(event.getNanoseconds());
+            // Generate time fields based on configuration
+            writeTimeFields(jg, event);
 
             jg.writeFieldName("severity");
             jg.writeString(event.getLevel().toString());
