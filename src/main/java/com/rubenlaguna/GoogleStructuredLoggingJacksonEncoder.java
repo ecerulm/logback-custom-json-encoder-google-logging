@@ -27,6 +27,14 @@ public class GoogleStructuredLoggingJacksonEncoder extends EncoderBase<ILoggingE
         try (JsonGenerator jg = jsonFactory.createGenerator(sw)) {
             jg.writeStartObject();
 
+
+            // For GKE logging agent we only need one of the time-related fields.
+            // I've include all of them for educational purposes.
+            // In order of preference, GKE will read
+            // 1. timestamp.seconds / timestamp.nanos if exists
+            // 2. timestempSeconds / timestampNanos if exists
+            // 3. time (RFC3339 format) if exists
+
             jg.writeFieldName("time");
             jg.writeString(formatter.format(event.getInstant()));
 
