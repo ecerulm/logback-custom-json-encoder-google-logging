@@ -5,10 +5,12 @@
             <withSequenceNumber>false</withSequenceNumber>
         </encoder> -->
         
-        <encoder class="com.rubenlaguna.GoogleStructuredLoggingEncoder">
-            <withSequenceNumber>false</withSequenceNumber>
-        </encoder>
+        <!-- <encoder class="com.rubenlaguna.GoogleStructuredLoggingEncoder"> -->
+        <!--     <withSequenceNumber>false</withSequenceNumber> -->
+        <!-- </encoder> -->
 
+        <encoder class="com.rubenlaguna.GoogleStructuredLoggingJacksonEncoder">
+        </encoder>
     </appender>
 
 

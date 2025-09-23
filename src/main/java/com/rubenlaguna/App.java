@@ -11,9 +11,10 @@ public class App {
     public static void main(String[] args) {
 
         Logger logger = LoggerFactory.getLogger("chapters.introduction.HelloWorld1");
+        for(int i=0; i < 10; i++) {
         String name = generateRandomString(6);
-        logger.debug("Hello world, {}", name);
-
+            logger.info("Hello World {}, iteration: {}", name, i);
+        }
     }
     
     private static String generateRandomString(int length) {
